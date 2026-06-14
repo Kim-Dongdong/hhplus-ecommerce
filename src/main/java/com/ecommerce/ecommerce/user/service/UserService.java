@@ -1,10 +1,11 @@
 package com.ecommerce.ecommerce.user.service;
 
+import com.ecommerce.ecommerce.common.exception.BusinessException;
+import com.ecommerce.ecommerce.common.exception.ErrorCode;
 import com.ecommerce.ecommerce.user.domain.User;
 import com.ecommerce.ecommerce.user.dto.UserRequest;
 import com.ecommerce.ecommerce.user.dto.UserResponse;
 import com.ecommerce.ecommerce.user.repository.UserRepository;
-import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,7 +23,7 @@ public class UserService {
     @Transactional
     public UserResponse create(UserRequest request) {
         if (userRepository.existsByEmail(request.email())) {
-            throw new IllegalArgumentException("Email already exists: " + request.email());
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
         String encodedPassword = passwordEncoder.encode(request.password());
         User user = new User(request.email(), encodedPassword, request.name());
@@ -44,7 +45,7 @@ public class UserService {
     public UserResponse update(Long id, UserRequest request) {
         User user = getUser(id);
         if (!user.getEmail().equals(request.email()) && userRepository.existsByEmail(request.email())) {
-            throw new IllegalArgumentException("Email already exists: " + request.email());
+            throw new BusinessException(ErrorCode.DUPLICATE_EMAIL);
         }
         user.update(request.name(), request.email());
         return UserResponse.toResponse(user);
@@ -57,6 +58,6 @@ public class UserService {
 
     private User getUser(Long id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("User not found. id=" + id));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "User not found. id=" + id));
     }
 }
