@@ -1,5 +1,7 @@
 package com.ecommerce.ecommerce.user.domain;
 
+import com.ecommerce.ecommerce.common.exception.BusinessException;
+import com.ecommerce.ecommerce.common.exception.ErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityListeners;
@@ -35,6 +37,9 @@ public class User {
     @Column(nullable = false)
     private String name;
 
+    @Column(nullable = false)
+    private int balance;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -52,5 +57,16 @@ public class User {
     public void update(String name, String email) {
         this.name = name;
         this.email = email;
+    }
+
+    public void chargeBalance(int amount) {
+        this.balance += amount;
+    }
+
+    public void decreaseBalance(int amount) {
+        if (this.balance < amount) {
+            throw new BusinessException(ErrorCode.INSUFFICIENT_BALANCE);
+        }
+        this.balance -= amount;
     }
 }

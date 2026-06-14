@@ -9,6 +9,7 @@ import com.ecommerce.ecommerce.coupon.dto.CouponResponse;
 import com.ecommerce.ecommerce.coupon.dto.UserCouponResponse;
 import com.ecommerce.ecommerce.coupon.repository.CouponRepository;
 import com.ecommerce.ecommerce.coupon.repository.UserCouponRepository;
+import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -72,6 +73,26 @@ public class CouponService {
         UserCoupon userCoupon = new UserCoupon(userId, coupon.getId(), coupon.getDiscountRate(), coupon.getExpiredAt());
         UserCoupon saved = userCouponRepository.save(userCoupon);
         return UserCouponResponse.toResponse(saved);
+    }
+
+    // 주문에서 쿠폰 적용 시 사용: 소유/미사용/유효기간을 검증하고 사용 처리한 뒤 할인율을 반환
+    @Transactional
+    public double useCoupon(Long userCouponId, Long userId) {
+        UserCoupon userCoupon = userCouponRepository.findById(userCouponId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_COUPON, "UserCoupon not found. id=" + userCouponId));
+
+        if (!userCoupon.getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.INVALID_COUPON, "Coupon does not belong to user. userCouponId=" + userCouponId);
+        }
+        if (userCoupon.isUsed()) {
+            throw new BusinessException(ErrorCode.INVALID_COUPON, "Coupon already used. userCouponId=" + userCouponId);
+        }
+        if (LocalDateTime.now().isAfter(userCoupon.getExpiredAt())) {
+            throw new BusinessException(ErrorCode.INVALID_COUPON, "Coupon expired. userCouponId=" + userCouponId);
+        }
+
+        userCoupon.use();
+        return userCoupon.getDiscountRate();
     }
 
     public List<UserCouponResponse> getUserCoupons(Long userId) {
